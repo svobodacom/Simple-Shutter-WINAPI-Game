@@ -22,13 +22,18 @@ typedef struct SObject
    TPoint pos;
    TPoint size;
    COLORREF brush;
-} TObject;
+   TPoint speed;
+   // type of object: 'e' - enemy, 'p' - player
+   char oType; 
+} TObject, *PObject;
 
-void ObjectInit(TObject* obj, float xPos, float yPos, float width, float height)
+void ObjectInit(TObject* obj, float xPos, float yPos, float width, float height, char objType)
 {
    obj->pos = point(xPos, yPos);
    obj->size = point(width, height);
    obj->brush = RGB(0, 255, 0);
+   obj->speed = point(0, 0);
+   obj->oType = objType;
 }
 
 // Draw procedure
@@ -44,16 +49,51 @@ void ObjectShow(TObject obj, HDC dc)
 
 RECT rct;
 TObject player;
+// array of enemies object
+PObject mas = NULL;
+int masCnt = 0;
 
-// to initialize the character
+PObject NewObject()
+{
+   masCnt++;
+   mas = static_cast<PObject>(realloc(mas, sizeof(*mas) * masCnt));
+   return mas + masCnt - 1;
+}
+
+//procedure to move the object
+void ObjectMove(TObject* obj)
+{
+   obj->pos.x += obj->speed.x;
+   obj->pos.y += obj->speed.y;
+}
+// control a speed of the player
+void PlayerControl()
+{
+   static int playerSpeed = 4;
+   player.speed.x = 0;
+   player.speed.y = 0;
+   if (GetKeyState('W') < 0) player.speed.y = -playerSpeed;
+   if (GetKeyState('S') < 0) player.speed.y = playerSpeed;
+   if (GetKeyState('A') < 0) player.speed.x = -playerSpeed;
+   if (GetKeyState('D') < 0) player.speed.x = playerSpeed;
+   // if the player moves diagonally - decrease 30% of speed
+   if ((player.speed.x != 0) && (player.speed.y != 0))
+      player.speed = point(player.speed.x * 0.7, player.speed.y * 0.7);
+}
+
+// to initialize the character and enemies
 void WinInit()
    {
-      ObjectInit(&player,100,100,40,40);
+      ObjectInit(&player,100,100,40,40,'p');
+      ObjectInit(NewObject(), 400, 100, 40, 40, 'e');
+      ObjectInit(NewObject(), 400, 300, 40, 40, 'e');
    }
 
 
 void WinMove()
 {
+   PlayerControl();
+   ObjectMove(&player);
    
 }
 
@@ -85,6 +125,10 @@ void WinShow(HDC dc)
    Rectangle(memDC, 0, 0, 640, 480);
 
    ObjectShow(player, memDC);
+   for (int i = 0; i < masCnt; i++)
+   {
+      ObjectShow(mas[i], memDC);
+   }
 
    BitBlt(dc, 0, 0, rct.right - rct.left, rct.bottom - rct.top, memDC, 0, 0, SRCCOPY);
 
