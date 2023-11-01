@@ -34,6 +34,8 @@ void ObjectInit(TObject* obj, float xPos, float yPos, float width, float height,
    obj->brush = RGB(0, 255, 0);
    obj->speed = point(0, 0);
    obj->oType = objType;
+   // enemies are red color
+   if (objType == 'e') obj->brush = RGB(255, 0, 0);
 }
 
 // Draw procedure
@@ -43,8 +45,23 @@ void ObjectShow(TObject obj, HDC dc)
    SetDCPenColor(dc, RGB(0, 0, 0));
    SelectObject(dc, GetStockObject(DC_BRUSH));
    SetDCBrushColor(dc, obj.brush);
-   Rectangle(dc, (int)(obj.pos.x), (int)(obj.pos.y), (int)(obj.pos.x + obj.size.x), (int)(obj.pos.y + obj.size.y));
+   // draw enemies in form of circle and player as a square
+   // define shape as a pointer to function
+   BOOL(*shape)(HDC, int, int, int, int);
+   shape = obj.oType == 'e' ? Ellipse : Rectangle;
+   shape(dc, (int)(obj.pos.x), (int)(obj.pos.y), (int)(obj.pos.x + obj.size.x), (int)(obj.pos.y + obj.size.y));
+}
 
+//procedure to define the speed
+void ObjectSetDestPoint(TObject *obj, float xPos, float yPos, float vecSpeed)
+{
+   //calculate the distance between object and destination point
+   TPoint xyLen = point(xPos - obj->pos.x, yPos - obj->pos.y);
+   // calculate the length by direct line
+   float dxy = sqrt(xyLen.x * xyLen.x + xyLen.y * xyLen.y);
+   // set the speed on each axis 
+   obj->speed.x = xyLen.x / dxy * vecSpeed;
+   obj->speed.y = xyLen.y / dxy * vecSpeed;
 }
 
 RECT rct;
@@ -63,9 +80,18 @@ PObject NewObject()
 //procedure to move the object
 void ObjectMove(TObject* obj)
 {
+   // enemies correct their direction 1 per 40 time
+   if (obj->oType == 'e')
+      if (rand() % 40 == 1)
+      {
+         static float enemySpeed = 1.5;
+         ObjectSetDestPoint(obj, player.pos.x, player.pos.y, enemySpeed);
+      }
+
    obj->pos.x += obj->speed.x;
    obj->pos.y += obj->speed.y;
 }
+
 // control a speed of the player
 void PlayerControl()
 {
@@ -89,11 +115,13 @@ void WinInit()
       ObjectInit(NewObject(), 400, 300, 40, 40, 'e');
    }
 
-
 void WinMove()
 {
    PlayerControl();
    ObjectMove(&player);
+   // enemies movement
+   for (int i = 0; i < masCnt; i++)
+      ObjectMove(mas + i);
    
 }
 
