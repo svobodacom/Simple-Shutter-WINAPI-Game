@@ -23,7 +23,7 @@ typedef struct SObject
    TPoint size;
    COLORREF brush;
    TPoint speed;
-   // type of object: 'e' - enemy, 'p' - player
+   // type of object: 'e' - enemy, 'p' - player, '1' - bullet
    char oType; 
 } TObject, *PObject;
 
@@ -75,6 +75,14 @@ PObject NewObject()
    masCnt++;
    mas = static_cast<PObject>(realloc(mas, sizeof(*mas) * masCnt));
    return mas + masCnt - 1;
+}
+
+//
+void AddBullet(float xPos, float yPos, float x, float y)
+{
+   PObject obj = NewObject();
+   ObjectInit(obj, xPos, yPos, 10, 10, '1');
+   ObjectSetDestPoint(obj, x, y, 4);
 }
 
 //procedure to move the object
@@ -138,6 +146,13 @@ LRESULT WndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam)
 
    else if (message == WM_SIZE)
       GetClientRect(hwnd, &rct);
+
+   else if (message == WM_LBUTTONDOWN)
+   {
+      int xPos = LOWORD(lparam);
+      int yPos = HIWORD(lparam);
+      AddBullet(player.pos.x + player.size.x / 2, player.pos.y + +player.size.y / 2, xPos, yPos);
+   }
 
    else return DefWindowProcA(hwnd, message, wparam, lparam);
 }
