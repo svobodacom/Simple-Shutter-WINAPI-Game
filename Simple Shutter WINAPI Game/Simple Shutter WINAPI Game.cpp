@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <windows.h>
 
-
 // the point object
 typedef struct SPoint
 {
@@ -23,8 +22,9 @@ typedef struct SObject
    TPoint size;
    COLORREF brush;
    TPoint speed;
-   // type of object: 'e' - enemy, 'p' - player, '1' - bullet
-   char oType; 
+   char oType;  // type of object: 'e' - enemy, 'p' - player, 'b' - bullet
+   float range, vecSpeed; // distance of bullet shoot and the vector speed
+   BOOL isDel; // need delete an object or not
 } TObject, *PObject;
 
 void ObjectInit(TObject* obj, float xPos, float yPos, float width, float height, char objType)
@@ -36,7 +36,11 @@ void ObjectInit(TObject* obj, float xPos, float yPos, float width, float height,
    obj->oType = objType;
    // enemies are red color
    if (objType == 'e') obj->brush = RGB(255, 0, 0);
+
+   obj->isDel = FALSE;
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Draw procedure
 void ObjectShow(TObject obj, HDC dc)
@@ -62,6 +66,8 @@ void ObjectSetDestPoint(TObject *obj, float xPos, float yPos, float vecSpeed)
    // set the speed on each axis 
    obj->speed.x = xyLen.x / dxy * vecSpeed;
    obj->speed.y = xyLen.y / dxy * vecSpeed;
+   // bullet speed
+   obj->vecSpeed = vecSpeed;
 }
 
 RECT rct;
@@ -77,15 +83,32 @@ PObject NewObject()
    return mas + masCnt - 1;
 }
 
-//
+//procedure to delete the object from the array
+void DelObjects()
+{
+   int i = 0;
+   while (i < masCnt)
+   {
+      if (mas[i].isDel)
+      {
+         masCnt--;
+         mas[i] = mas[masCnt];
+         mas = static_cast<PObject>(realloc(mas, sizeof(*mas) * masCnt));
+      }
+      else
+         i++;
+   }
+}
+
 void AddBullet(float xPos, float yPos, float x, float y)
 {
    PObject obj = NewObject();
-   ObjectInit(obj, xPos, yPos, 10, 10, '1');
+   ObjectInit(obj, xPos, yPos, 10, 10, 'b');
    ObjectSetDestPoint(obj, x, y, 4);
+   obj->range = 300;
 }
 
-//procedure to move the object
+//procedure to move an object
 void ObjectMove(TObject* obj)
 {
    // enemies correct their direction 1 per 40 time
@@ -95,12 +118,21 @@ void ObjectMove(TObject* obj)
          static float enemySpeed = 1.5;
          ObjectSetDestPoint(obj, player.pos.x, player.pos.y, enemySpeed);
       }
-
+   // player movement
    obj->pos.x += obj->speed.x;
    obj->pos.y += obj->speed.y;
+
+   // bullet movement
+   if (obj->oType == 'b')
+   {
+      obj->range -= obj->vecSpeed;
+      // when bullet distance is max - delete the bullet
+      if (obj->range < 0) 
+         obj->isDel = TRUE;
+   }
 }
 
-// control a speed of the player
+// control the speed of the player
 void PlayerControl()
 {
    static int playerSpeed = 4;
@@ -114,6 +146,8 @@ void PlayerControl()
    if ((player.speed.x != 0) && (player.speed.y != 0))
       player.speed = point(player.speed.x * 0.7, player.speed.y * 0.7);
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // to initialize the character and enemies
 void WinInit()
@@ -130,7 +164,8 @@ void WinMove()
    // enemies movement
    for (int i = 0; i < masCnt; i++)
       ObjectMove(mas + i);
-   
+
+   DelObjects();
 }
 
 LRESULT WndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam)
@@ -180,6 +215,8 @@ void WinShow(HDC dc)
    DeleteObject(memBM);
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 int main()
 {
    WNDCLASSA wcl;
@@ -213,12 +250,6 @@ int main()
          Sleep(5);
       }
    }
-
-
-
-
-
-
 
 
    return 0;
