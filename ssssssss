@@ -1,0 +1,53 @@
+[33mcommit 0c80572aaca786d027a43d729e4abdb71382d6bb[m[33m ([m[1;36mHEAD -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m)[m
+Author: Don Silvio <svobodacom1@gmail.com>
+Date:   Mon Nov 6 14:29:30 2023 +0200
+
+    create the background
+
+[33mcommit e6dcad631911027c37507597f853f9f582159600[m
+Author: Don Silvio <svobodacom1@gmail.com>
+Date:   Mon Nov 6 14:08:09 2023 +0200
+
+    random generating of new enemies
+
+[33mcommit 2980130a51c58fb3258ed767bf64ac0e3bf9fbeb[m
+Author: Don Silvio <svobodacom1@gmail.com>
+Date:   Sat Nov 4 20:40:30 2023 +0200
+
+    functionality of bullet disappearance
+
+[33mcommit fc3ae2b713a4b1bc71b3830796552b8b277561b7[m
+Author: Don Silvio <svobodacom1@gmail.com>
+Date:   Wed Nov 1 23:40:37 2023 +0200
+
+    addiing possibility to shoot by player
+
+[33mcommit 6156b53b71ddb92a5c7715569f543a58736dc7d3[m
+Author: Don Silvio <svobodacom1@gmail.com>
+Date:   Wed Nov 1 14:40:30 2023 +0200
+
+    red enemies try to catch the player
+
+[33mcommit 191f995bc61170fef79bc42ed0e7da57482d1d79[m
+Author: Don Silvio <svobodacom1@gmail.com>
+Date:   Tue Oct 31 20:06:39 2023 +0200
+
+    add enemies
+
+[33mcommit ddc6ec0d16ea8de64ad30693da03e13b5b836cf6[m
+Author: Don Silvio <svobodacom1@gmail.com>
+Date:   Tue Oct 31 17:32:24 2023 +0200
+
+    create the character
+
+[33mcommit 87ca9f20650acc24738d31d174ac79ea869a8f53[m
+Author: Don Silvio <svobodacom1@gmail.com>
+Date:   Tue Oct 31 13:43:01 2023 +0200
+
+    Add project files.
+
+[33mcommit 225a6084565c49ccb9626de3fb62d5de17687f8b[m
+Author: Don Silvio <svobodacom1@gmail.com>
+Date:   Tue Oct 31 13:43:00 2023 +0200
+
+    Add .gitattributes and .gitignore.

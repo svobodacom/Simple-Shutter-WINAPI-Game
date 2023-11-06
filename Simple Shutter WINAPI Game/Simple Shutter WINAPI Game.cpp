@@ -34,6 +34,15 @@ typedef struct SObject
    BOOL isDel; // need delete an object or not
 } TObject, *PObject;
 
+RECT rct;
+TObject player;
+
+// array of enemies object
+PObject mas = NULL;
+int masCnt = 0;
+BOOL needNewGame = FALSE;
+
+
 // function to check the crossing of two objects
 BOOL ObjectCollision(TObject o1, TObject o2)
 {
@@ -52,6 +61,14 @@ void ObjectInit(TObject* obj, float xPos, float yPos, float width, float height,
    if (objType == 'e') obj->brush = RGB(255, 0, 0);
 
    obj->isDel = FALSE;
+}
+
+
+PObject NewObject()
+{
+   masCnt++;
+   mas = static_cast<PObject>(realloc(mas, sizeof(*mas) * masCnt));
+   return mas + masCnt - 1;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -82,19 +99,6 @@ void ObjectSetDestPoint(TObject *obj, float xPos, float yPos, float vecSpeed)
    obj->speed.y = xyLen.y / dxy * vecSpeed;
    // bullet speed
    obj->vecSpeed = vecSpeed;
-}
-
-RECT rct;
-TObject player;
-// array of enemies object
-PObject mas = NULL;
-int masCnt = 0;
-
-PObject NewObject()
-{
-   masCnt++;
-   mas = static_cast<PObject>(realloc(mas, sizeof(*mas) * masCnt));
-   return mas + masCnt - 1;
 }
 
 // procedure for generating enemies
@@ -148,11 +152,16 @@ void ObjectMove(TObject* obj)
 {
    // enemies correct their direction 1 per 40 time
    if (obj->oType == 'e')
+   {
       if (rand() % 40 == 1)
       {
-         static float enemySpeed = 1.5;
+         static float enemySpeed = 1.3;
          ObjectSetDestPoint(obj, player.pos.x, player.pos.y, enemySpeed);
       }
+      if (ObjectCollision(*obj, player))
+         needNewGame = TRUE;
+   }
+      
    // player movement
    obj->pos.x += obj->speed.x;
    obj->pos.y += obj->speed.y;
@@ -197,13 +206,19 @@ void PlayerControl()
 // to initialize the character and enemies
 void WinInit()
    {
-      ObjectInit(&player,100,100,40,40,'p');
-      ObjectInit(NewObject(), 400, 100, 40, 40, 'e');
-      ObjectInit(NewObject(), 400, 300, 40, 40, 'e');
+   needNewGame = FALSE;
+   masCnt = 0;
+   //when the new level starts the memory will be cleaned
+   mas = static_cast<PObject>(realloc(mas, 0));
+
+   ObjectInit(&player,100,100,40,40,'p');
    }
 
 void WinMove()
 {
+   if (needNewGame)
+      WinInit();
+
    PlayerControl();
    ObjectMove(&player);
    SetCameraFocus(player);
@@ -252,9 +267,10 @@ void WinShow(HDC dc)
    SetDCBrushColor(memDC, RGB(200, 200, 200));
 
    // create the background
-   static int rectSize = 200;
-   int dx = (int)(cam.x) % rectSize;
+   static int rectSize = 200; // the size of square
+   int dx = (int)(cam.x) % rectSize; // offset of beginning to draw the square
    int dy = (int)(cam.y) % rectSize;
+   // fill the background by gray squares
    for (int i = -1; i < (rct.right / rectSize) + 2; i++)
    {
       for (int j = -1; j < (rct.bottom / rectSize) + 2; j++)
