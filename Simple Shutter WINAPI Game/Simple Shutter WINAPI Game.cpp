@@ -246,9 +246,23 @@ void WinShow(HDC dc)
    HBITMAP memBM = CreateCompatibleBitmap(dc, rct.right - rct.left, rct.bottom - rct.top);
    SelectObject(memDC, memBM);
 
+   SelectObject(memDC, GetStockObject(DC_PEN));
+   SetDCPenColor(memDC, RGB(255, 255, 255));
    SelectObject(memDC, GetStockObject(DC_BRUSH));
-   SetDCBrushColor(memDC, RGB(255, 255, 255));
-   Rectangle(memDC, 0, 0, 640, 480);
+   SetDCBrushColor(memDC, RGB(200, 200, 200));
+
+   // create the background
+   static int rectSize = 200;
+   int dx = (int)(cam.x) % rectSize;
+   int dy = (int)(cam.y) % rectSize;
+   for (int i = -1; i < (rct.right / rectSize) + 2; i++)
+   {
+      for (int j = -1; j < (rct.bottom / rectSize) + 2; j++)
+      {
+         Rectangle(memDC, -dx + (i * rectSize), -dy + (j * rectSize), -dx + ((i + 1) * rectSize), -dy + ((j + 1) * rectSize));
+      }
+   }
+
 
    ObjectShow(player, memDC);
    for (int i = 0; i < masCnt; i++)
