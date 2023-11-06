@@ -2,6 +2,9 @@
 #include <stdlib.h>
 #include <windows.h>
 
+// macros for creating enemies
+#define AddEnemy(a,b) ObjectInit(NewObject(), a, b, 40, 40, 'e')
+
 // the point object
 typedef struct SPoint
 {
@@ -15,6 +18,10 @@ TPoint point(float x, float y)
    pt.y = y;
    return pt;
 }
+
+// offset point
+TPoint cam;
+
 // data type for object
 typedef struct SObject
 {
@@ -26,6 +33,13 @@ typedef struct SObject
    float range, vecSpeed; // distance of bullet shoot and the vector speed
    BOOL isDel; // need delete an object or not
 } TObject, *PObject;
+
+// function to check the crossing of two objects
+BOOL ObjectCollision(TObject o1, TObject o2)
+{
+   return ((o1.pos.x + o1.size.x) > o2.pos.x) && (o1.pos.x < (o2.pos.x + o2.size.x)) &&
+          ((o1.pos.y + o1.size.y) > o2.pos.y) && (o1.pos.y < (o2.pos.y + o2.size.y));
+}
 
 void ObjectInit(TObject* obj, float xPos, float yPos, float width, float height, char objType)
 {
@@ -53,7 +67,7 @@ void ObjectShow(TObject obj, HDC dc)
    // define shape as a pointer to function
    BOOL(*shape)(HDC, int, int, int, int);
    shape = obj.oType == 'e' ? Ellipse : Rectangle;
-   shape(dc, (int)(obj.pos.x), (int)(obj.pos.y), (int)(obj.pos.x + obj.size.x), (int)(obj.pos.y + obj.size.y));
+   shape(dc, (int)(obj.pos.x - cam.x), (int)(obj.pos.y - cam.y), (int)(obj.pos.x + obj.size.x - cam.x), (int)(obj.pos.y + obj.size.y - cam.y));
 }
 
 //procedure to define the speed
@@ -83,6 +97,20 @@ PObject NewObject()
    return mas + masCnt - 1;
 }
 
+// procedure for generating enemies
+void GenNewEnemy()
+{
+   static int rad = 300;
+   int pos1 = (rand() % 2 == 0 ? -rad : rad);
+   int pos2 = (rand() % (rad * 2)) - rad;
+   int k = rand() % 100;
+   if (k == 1)
+      AddEnemy(player.pos.x + pos1, player.pos.y + pos2);
+   if (k == 2)
+      AddEnemy(player.pos.x + pos2, player.pos.y + pos1);
+
+}
+
 //procedure to delete the object from the array
 void DelObjects()
 {
@@ -108,6 +136,13 @@ void AddBullet(float xPos, float yPos, float x, float y)
    obj->range = 300;
 }
 
+// procedure to set the focus on object
+void SetCameraFocus(TObject obj)
+{
+   cam.x = obj.pos.x - rct.right / 2;
+   cam.y = obj.pos.y - rct.bottom / 2;
+}
+
 //procedure to move an object
 void ObjectMove(TObject* obj)
 {
@@ -129,6 +164,16 @@ void ObjectMove(TObject* obj)
       // when bullet distance is max - delete the bullet
       if (obj->range < 0) 
          obj->isDel = TRUE;
+
+      // if bullet cross the enemy == bullet and enemy are deleting
+      for (int i = 0; i < masCnt; i++)
+      {
+         if ((mas[i].oType == 'e') && (ObjectCollision(*obj, mas[i])))
+         {
+            mas[i].isDel = TRUE;
+            obj->isDel = TRUE;
+         }
+      }
    }
 }
 
@@ -161,10 +206,13 @@ void WinMove()
 {
    PlayerControl();
    ObjectMove(&player);
+   SetCameraFocus(player);
+
    // enemies movement
    for (int i = 0; i < masCnt; i++)
       ObjectMove(mas + i);
 
+   GenNewEnemy();
    DelObjects();
 }
 
@@ -186,7 +234,7 @@ LRESULT WndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam)
    {
       int xPos = LOWORD(lparam);
       int yPos = HIWORD(lparam);
-      AddBullet(player.pos.x + player.size.x / 2, player.pos.y + +player.size.y / 2, xPos, yPos);
+      AddBullet(player.pos.x + player.size.x / 2, player.pos.y + +player.size.y / 2, xPos + cam.x, yPos + cam.y);
    }
 
    else return DefWindowProcA(hwnd, message, wparam, lparam);
@@ -223,6 +271,7 @@ int main()
    memset(&wcl, 0, sizeof(WNDCLASSA));
    wcl.lpszClassName = "MyWindow";
    wcl.lpfnWndProc = WndProc;
+   wcl.hCursor = LoadCursor(NULL,IDC_CROSS);
    RegisterClassA(&wcl);
 
    HWND hwnd;
