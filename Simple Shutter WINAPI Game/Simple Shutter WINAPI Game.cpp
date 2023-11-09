@@ -19,9 +19,6 @@ TPoint point(float x, float y)
    return pt;
 }
 
-// offset point
-TPoint cam;
-
 // data type for object
 typedef struct SObject
 {
@@ -29,25 +26,105 @@ typedef struct SObject
    TPoint size;
    COLORREF brush;
    TPoint speed;
-   char oType;  // type of object: 'e' - enemy, 'p' - player, 'b' - bullet
-   float range, vecSpeed; // distance of bullet shoot and the vector speed
-   BOOL isDel; // need delete an object or not
+   char oType;              // type of object: 'e' - enemy, 'p' - player, 'b' - bullet
+   float range, vecSpeed;   // distance of bullet shoot and the vector speed
+   BOOL isDel;              // need delete an object or not
 } TObject, *PObject;
 
 RECT rct;
 TObject player;
+TPoint cam;                 // offset point
 
 // array of enemies object
 PObject mas = NULL;
 int masCnt = 0;
 BOOL needNewGame = FALSE;
 
+//-------------------------------------------------------------------------------------------
 
 // function to check the crossing of two objects
+BOOL ObjectCollision(TObject o1, TObject o2);
+
+void ObjectInit(TObject* obj, float xPos, float yPos, float width, float height, char objType);
+
+PObject NewObject();
+
+// Draw procedure
+void ObjectShow(TObject obj, HDC dc);
+
+//procedure to define the speed
+void ObjectSetDestPoint(TObject* obj, float xPos, float yPos, float vecSpeed);
+
+// procedure for generating enemies
+void GenNewEnemy();
+
+//procedure to delete the object from the array
+void DelObjects();
+
+void AddBullet(float xPos, float yPos, float x, float y);
+
+// procedure to set the focus on object
+void SetCameraFocus(TObject obj);
+
+//procedure to move an object
+void ObjectMove(TObject* obj);
+
+// control the speed of the player
+void PlayerControl();
+
+// to initialize the character and enemies
+void WinInit();
+
+void WinMove();
+
+LRESULT WndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam);
+
+void WinShow(HDC dc);
+
+int main()
+{
+   WNDCLASSA wcl;
+   memset(&wcl, 0, sizeof(WNDCLASSA));
+   wcl.lpszClassName = "MyWindow";
+   wcl.lpfnWndProc = WndProc;
+   wcl.hCursor = LoadCursor(NULL,IDC_CROSS);
+   RegisterClassA(&wcl);
+
+   HWND hwnd;
+   hwnd = CreateWindow(L"MyWindow", L"SHUTTER GAME", WS_OVERLAPPEDWINDOW, 10, 10, 640, 480, NULL, NULL, NULL, NULL);
+
+   HDC dc = GetDC(hwnd);
+
+   ShowWindow(hwnd, SW_SHOWNORMAL);
+
+   WinInit();
+
+   MSG msg;
+   while (true)
+   {
+      if (PeekMessageA(&msg, NULL, 0, 0, PM_REMOVE))
+      {
+         if (msg.message == WM_QUIT) break;
+         TranslateMessage(&msg);
+         DispatchMessage(&msg);
+      }
+      else
+      {
+         WinMove();
+         WinShow(dc);
+         Sleep(5);
+      }
+   }
+
+   return 0;
+}
+
+
+
 BOOL ObjectCollision(TObject o1, TObject o2)
 {
    return ((o1.pos.x + o1.size.x) > o2.pos.x) && (o1.pos.x < (o2.pos.x + o2.size.x)) &&
-          ((o1.pos.y + o1.size.y) > o2.pos.y) && (o1.pos.y < (o2.pos.y + o2.size.y));
+      ((o1.pos.y + o1.size.y) > o2.pos.y) && (o1.pos.y < (o2.pos.y + o2.size.y));
 }
 
 void ObjectInit(TObject* obj, float xPos, float yPos, float width, float height, char objType)
@@ -63,7 +140,6 @@ void ObjectInit(TObject* obj, float xPos, float yPos, float width, float height,
    obj->isDel = FALSE;
 }
 
-
 PObject NewObject()
 {
    masCnt++;
@@ -71,9 +147,8 @@ PObject NewObject()
    return mas + masCnt - 1;
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
+//-------------------------------------------------------------------------------------------
 
-// Draw procedure
 void ObjectShow(TObject obj, HDC dc)
 {
    SelectObject(dc, GetStockObject(DC_PEN));
@@ -87,8 +162,7 @@ void ObjectShow(TObject obj, HDC dc)
    shape(dc, (int)(obj.pos.x - cam.x), (int)(obj.pos.y - cam.y), (int)(obj.pos.x + obj.size.x - cam.x), (int)(obj.pos.y + obj.size.y - cam.y));
 }
 
-//procedure to define the speed
-void ObjectSetDestPoint(TObject *obj, float xPos, float yPos, float vecSpeed)
+void ObjectSetDestPoint(TObject* obj, float xPos, float yPos, float vecSpeed)
 {
    //calculate the distance between object and destination point
    TPoint xyLen = point(xPos - obj->pos.x, yPos - obj->pos.y);
@@ -101,7 +175,6 @@ void ObjectSetDestPoint(TObject *obj, float xPos, float yPos, float vecSpeed)
    obj->vecSpeed = vecSpeed;
 }
 
-// procedure for generating enemies
 void GenNewEnemy()
 {
    static int rad = 300;
@@ -115,7 +188,6 @@ void GenNewEnemy()
 
 }
 
-//procedure to delete the object from the array
 void DelObjects()
 {
    int i = 0;
@@ -140,14 +212,12 @@ void AddBullet(float xPos, float yPos, float x, float y)
    obj->range = 300;
 }
 
-// procedure to set the focus on object
 void SetCameraFocus(TObject obj)
 {
    cam.x = obj.pos.x - rct.right / 2;
    cam.y = obj.pos.y - rct.bottom / 2;
 }
 
-//procedure to move an object
 void ObjectMove(TObject* obj)
 {
    // enemies correct their direction 1 per 40 time
@@ -161,7 +231,7 @@ void ObjectMove(TObject* obj)
       if (ObjectCollision(*obj, player))
          needNewGame = TRUE;
    }
-      
+
    // player movement
    obj->pos.x += obj->speed.x;
    obj->pos.y += obj->speed.y;
@@ -171,7 +241,7 @@ void ObjectMove(TObject* obj)
    {
       obj->range -= obj->vecSpeed;
       // when bullet distance is max - delete the bullet
-      if (obj->range < 0) 
+      if (obj->range < 0)
          obj->isDel = TRUE;
 
       // if bullet cross the enemy == bullet and enemy are deleting
@@ -186,7 +256,6 @@ void ObjectMove(TObject* obj)
    }
 }
 
-// control the speed of the player
 void PlayerControl()
 {
    static int playerSpeed = 4;
@@ -201,18 +270,17 @@ void PlayerControl()
       player.speed = point(player.speed.x * 0.7, player.speed.y * 0.7);
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
+//-------------------------------------------------------------------------------------------
 
-// to initialize the character and enemies
 void WinInit()
-   {
+{
    needNewGame = FALSE;
    masCnt = 0;
    //when the new level starts the memory will be cleaned
    mas = static_cast<PObject>(realloc(mas, 0));
 
-   ObjectInit(&player,100,100,40,40,'p');
-   }
+   ObjectInit(&player, 100, 100, 40, 40, 'p');
+}
 
 void WinMove()
 {
@@ -235,10 +303,10 @@ LRESULT WndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam)
 {
    if (message == WM_DESTROY)
       PostQuitMessage(0);
-  
+
    else if (message == WM_KEYDOWN)
       printf("code = %d\n", wparam);
- 
+
    else if (message == WM_CHAR)
       printf("%c\n", wparam);
 
@@ -288,49 +356,7 @@ void WinShow(HDC dc)
 
    BitBlt(dc, 0, 0, rct.right - rct.left, rct.bottom - rct.top, memDC, 0, 0, SRCCOPY);
 
-   
+
    DeleteDC(memDC);
    DeleteObject(memBM);
 }
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-int main()
-{
-   WNDCLASSA wcl;
-   memset(&wcl, 0, sizeof(WNDCLASSA));
-   wcl.lpszClassName = "MyWindow";
-   wcl.lpfnWndProc = WndProc;
-   wcl.hCursor = LoadCursor(NULL,IDC_CROSS);
-   RegisterClassA(&wcl);
-
-   HWND hwnd;
-   hwnd = CreateWindow(L"MyWindow", L"SHUTTER GAME", WS_OVERLAPPEDWINDOW, 10, 10, 640, 480, NULL, NULL, NULL, NULL);
-
-   HDC dc = GetDC(hwnd);
-
-   ShowWindow(hwnd, SW_SHOWNORMAL);
-
-   WinInit();
-
-   MSG msg;
-   while (true)
-   {
-      if (PeekMessageA(&msg, NULL, 0, 0, PM_REMOVE))
-      {
-         if (msg.message == WM_QUIT) break;
-         TranslateMessage(&msg);
-         DispatchMessage(&msg);
-      }
-      else
-      {
-         WinMove();
-         WinShow(dc);
-         Sleep(5);
-      }
-   }
-
-
-   return 0;
-}
-
